@@ -1,0 +1,21 @@
+---
+workload:
+ -
+  qname: Q1
+  qtxt:	"select 1"
+  weight:    80
+  threads:    10
+  csvfile:    q1.csv
+ -
+  qname: Q2
+  qtxt:	select 1, 2
+  weight:    10
+  threads:     2
+  csvfile:    q2.csv
+ -
+  qname: Q3
+  qtxt:	>-
+    select 1, 2, 3
+  weight:    10
+  threads:     2
+  csvfile:    q3.csv

@@ -1,0 +1,23 @@
+---
+workload:
+ -
+  qname: Q1
+  qtxt:	"select * from something where id=$1"
+  weight:    80
+  threads:    10
+  csvfile:    q1.csv
+ -
+  qname: Q2
+  qtxt:	select * from somethingelse where id=$1 and id2=$2
+  weight:    10
+  threads:     2
+  csvfile:    q2.csv
+ -
+  qname: Q3
+  qtxt:	>-
+    select *
+    from somethingelse
+    where id=$1 and id3=$3 and id2=$2
+  weight:    10
+  threads:     2
+  csvfile:    q3.csv

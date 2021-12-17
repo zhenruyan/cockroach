@@ -1,0 +1,15 @@
+---
+workload:
+ -
+  qname: Q1
+  qtxt:	"select $1::int"
+  csvfile:    q1.csv
+ -
+  qname: Q2
+  qtxt:	select $1::int, $2::int
+  csvfile:    q2.csv
+ -
+  qname: Q3
+  qtxt:	>-
+    select $1::int, $2::int, $3::int
+  csvfile:    q3.csv

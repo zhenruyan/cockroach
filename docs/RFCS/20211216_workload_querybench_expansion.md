@@ -5,15 +5,6 @@
 - RFC PR: (PR # after acceptance of initial draft)
 - Cockroach Issue: (one or more # from the issue tracker)
 
-**Remember, you can submit a PR with your RFC before the text is
-complete. Refer to the [README](README.md#rfc-process) for details.**
-
-**Remember, you can either fill in this template from scratch, for
-example if you prefer working from a blank slate, or you can follow
-the writing prompts in the [GUIDE](GUIDE.md). In any case, please ensure
-at the end that you have all relevant topics from the guide covered in
-your prose.**
-
 # Summary
 
 The `querybench` option to the `workload` tool is incredibly useful to test workloads with customer data and queries.  Using their own queries and data are useful, but the existing querybench option only supports the inclusion of fully qualified queries without randomization of predicates.  This makes it difficult to run a real-world workflow.  Additionally, it is also not possible to specify the rate and mix of various queries that make up the customer's workload.
@@ -41,16 +32,17 @@ q1:
    - statement: |
        SELECT count(*)
        FROM mytable
-       WHERE id = $1
+       WHERE id = $1 and other_id = $2
    - csvfile: q1_predicates.csv
+   - csvdelimeter: "\t"
    - weight: 80
 q2: 
    - statement: |
        SELECT some, stuff
        FROM mytable
-       WHERE id = $1
+       WHERE id = $1 and other_id = $2
    - predicate_array_population_query: |
-       SELECT id from mytable limit 1000 
+       SELECT id, other_id from mytable limit 1000 
    - weight: 20
 ```
 

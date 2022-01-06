@@ -14,13 +14,16 @@ import (
 	"bufio"
 	"context"
 	gosql "database/sql"
+	"encoding/csv"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
-	"math/rand"
 	"time"
+	"unicode/utf8"
 
 	"io/ioutil"
+
 	"gopkg.in/yaml.v2"
 
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
@@ -31,11 +34,13 @@ import (
 )
 
 type queryDef struct {
-	qname string
-	qtxt string
+	qname   string
+	qtxt    string
 	csvfile string
 	// stmtvals is the CSV file in an array strings for each value
 	stmtvals [][]string
+	qweight  int
+	qcnt     int `default:1`
 }
 
 type queryBench struct {
@@ -45,7 +50,7 @@ type queryBench struct {
 	numRunsPerQuery int
 	vectorize       string
 	verbose         bool
-	workloadFile	string
+	workloadFile    string
 
 	qworkload []queryDef
 
@@ -55,9 +60,10 @@ type queryBench struct {
 type YQuery struct {
 	Qname   string `yaml:"qname"`
 	Qtxt    string `yaml:"qtxt"`
-	Weight  string `yaml:"weight"`
+	Qweight int    `yaml:"qweight"`
 	Threads string `yaml:"threads"`
 	Csvfile string `yaml:"csvfile"`
+	Csvdel  string `yaml:"csvdelimeter"`
 }
 
 type WorkloadConfig struct {
@@ -79,11 +85,11 @@ var queryBenchMeta = workload.Meta{
 		g := &queryBench{}
 		g.flags.FlagSet = pflag.NewFlagSet(`querybench`, pflag.ContinueOnError)
 		g.flags.Meta = map[string]workload.FlagMeta{
-			`query-file`: {RuntimeOnly: true},
-			`optimizer`:  {RuntimeOnly: true},
-			`vectorize`:  {RuntimeOnly: true},
-			`num-runs`:   {RuntimeOnly: true},
-			`workload-file`:   {RuntimeOnly: true},
+			`query-file`:    {RuntimeOnly: true},
+			`optimizer`:     {RuntimeOnly: true},
+			`vectorize`:     {RuntimeOnly: true},
+			`num-runs`:      {RuntimeOnly: true},
+			`workload-file`: {RuntimeOnly: true},
 		}
 		g.flags.StringVar(&g.queryFile, `query-file`, ``, `File of newline separated queries to run`)
 		g.flags.StringVar(&g.workloadFile, `workload-file`, ``, `Yaml file with query and workload attributes`)
@@ -101,7 +107,6 @@ var queryBenchMeta = workload.Meta{
 var vectorizeSetting19_2Translation = map[string]string{
 	"on": "experimental_on",
 }
-
 
 // Meta implements the Generator interface.
 func (*queryBench) Meta() workload.Meta { return queryBenchMeta }
@@ -158,41 +163,44 @@ func (g *queryBench) Hooks() workload.Hooks {
 					}
 
 					g.queries = []string{} // Populate q.queries for test from yaml
-					g.queries = nil // same as above
+					g.queries = nil        // same as above
 
 					var qtmp queryDef
-					var stmtvals [][]string
 
 					for _, s := range yget {
 						g.queries = append(g.queries, s.Qtxt)
 						qtmp.qname = s.Qname
 						qtmp.qtxt = s.Qtxt
 						qtmp.csvfile = s.Csvfile
+						qtmp.qweight = s.Qweight
 
-						// Extract CSV lines into data structure stored in qworkload/QueryDef
-						lines, err := readLines(s.Csvfile)
+						// fmt.Println(qtmp.qweight)
+
+						b, err := ioutil.ReadFile(s.Csvfile)
+						if err != nil {
+							fmt.Print(err)
+						}
+						filestr := string(b)
+
+						r := csv.NewReader(strings.NewReader(filestr))
+						delRune, _ := utf8.DecodeRuneInString(s.Csvdel)
+						r.Comma = delRune
+						r.Comment = '#'
+
+						records, err := r.ReadAll()
 						if err != nil {
 							panic(err)
 						}
-						stmtvals = [][]string{}
-						for _, line := range lines {
-							// fmt.Println(i, line)
-							stmtvals = append(stmtvals, strings.Split(line, ","))
-							// fmt.Println(arrlines[i])
-						}
-						qtmp.stmtvals = stmtvals
+						// fmt.Println(records)
 
+						qtmp.stmtvals = records
 						g.qworkload = append(g.qworkload, qtmp)
-
-						fmt.Println(stmtvals)
-						// fmt.Println(s.Qtxt)
-						// fmt.Println(i)
 					}
 					return nil
 				}
 				return nil
 			}
-				return errors.Errorf("--query-file or --workload-file must be specified")
+			return errors.Errorf("--query-file or --workload-file must be specified")
 
 		},
 	}
@@ -249,7 +257,9 @@ func (g *queryBench) Ops(
 		}
 		stmts[i].preparedStmt = stmt
 		stmts[i].stmtvals = g.qworkload[i].stmtvals
-		// stmts[i].queryName = query
+		stmts[i].queryName = g.qworkload[i].qname
+		stmts[i].qweight = g.qworkload[i].qweight
+		stmts[i].qcnt = g.qworkload[i].qcnt
 	}
 
 	maxNumStmts := 0
@@ -321,6 +331,8 @@ type namedStmt struct {
 	preparedStmt *gosql.Stmt
 	query        string
 	queryName    string
+	qweight      int
+	qcnt         int `default:1`
 	stmtvals     [][]string
 }
 
@@ -328,7 +340,6 @@ type queryBenchWorker struct {
 	hists *histogram.Histograms
 	db    *gosql.DB
 	stmts []namedStmt
-
 
 	stmtIdx int
 	verbose bool
@@ -349,11 +360,20 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 	}
 	start := timeutil.Now()
 	stmt := o.stmts[o.stmtIdx%len(o.stmts)]
-	// fmt.Println(stmt)
-	// os.Exit(0)
 	stmtvals := o.stmts[o.stmtIdx%len(o.stmts)].stmtvals
+	qcnt := o.stmts[o.stmtIdx%len(o.stmts)].qcnt
+	qweight := o.stmts[o.stmtIdx%len(o.stmts)].qweight
 
-	o.stmtIdx++
+	// fmt.Println(qcnt, " :: ", qweight, " :: ", o.stmts[o.stmtIdx%len(o.stmts)].qweight)
+
+	if qcnt >= qweight {
+		o.stmtIdx++
+		o.stmts[o.stmtIdx%len(o.stmts)].qcnt = 1
+	} else {
+		o.stmts[o.stmtIdx%len(o.stmts)].qcnt++
+	}
+
+	// o.stmtIdx++
 
 	exhaustRows := func(execFn func() (*gosql.Rows, error)) error {
 		rows, err := execFn()
@@ -374,13 +394,9 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 			// Find Random Line in CSV file data structure
 			lstr := []string{}
 			rand.Seed(time.Now().UnixNano())
-			// fmt.Println(len(stmtvals))
-			// fmt.Println(stmtvals)
-			// os.Exit(0)
 			roff := rand.Intn(len(stmtvals))
-			for _, l := range stmt.stmtvals[roff] {
-				lstr = append(lstr, l)
-			}
+
+			lstr = append(lstr, stmt.stmtvals[roff]...)
 
 			// Prepare to call preparedStmt
 			args := make([]interface{}, len(lstr))
@@ -389,7 +405,6 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 			}
 			// fmt.Println(args)
 			return stmt.preparedStmt.Query(args...)
-			// return stmt.preparedStmt.Query()
 
 		}); err != nil {
 			return err
@@ -404,7 +419,6 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 	elapsed := timeutil.Since(start)
 	if o.verbose {
 		o.hists.Get(stmt.name).Record(elapsed)
-		// fmt.Println(stmt.name)
 	} else {
 		o.hists.Get("").Record(elapsed)
 	}

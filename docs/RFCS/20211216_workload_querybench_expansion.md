@@ -22,29 +22,42 @@ This RFC is to expand the querybench tool to provide a way to define a full work
   - Populate data structure for substitution to be populated by
   - CSV file that contains valid values
 - Query to populate valid values
-- Provide a Random Seed for reproducible results
+
+The yaml file format should begin with `workload:` at the highest level to describe the desired workload.  Each section should describe the attributes of each query.  For the initial phase, the support for CSV files is desired.  The following variables are required to define the queries:
+
+- `qname` :: Name of the query instead of the full text
+- `qtxt` :: The text of the query to be run.  Values to be replaced are defined by $1, $2, ... and match the CSV file values
+- `csvfile` :: Name of the CSV file containing replacement values for the query
+- `csvdelimeter` :: The `","` is default delimeter, but can be specified as anything such as: `"\t"` or `"|"`
+- `qweight` :: This is the weighted of this query vs the others defined within the workload
 
 For example, a workload could be described by a yaml file like so:
 
 ```yml
-workload: mytestversion
-q1:
-   - statement: |
-       SELECT count(*)
-       FROM mytable
-       WHERE id = $1 and other_id = $2
-   - csvfile: q1_predicates.csv
-   - csvdelimeter: "\t"
-   - weight: 80
-q2: 
-   - statement: |
-       SELECT some, stuff
-       FROM mytable
-       WHERE id = $1 and other_id = $2
-   - predicate_array_population_query: |
-       SELECT id, other_id from mytable limit 1000 
-   - weight: 20
-```
+---
+workload:
+ -
+  qname: Q1
+  qtxt:	"SELECT $1::int"
+  csvfile:    q1.csv
+  csvdelimeter: ","
+  qweight: 8
+ -
+  qname: Q2_tab
+  qtxt:	SELECT $1::int, $2::int
+  csvfile:    q2.csv
+  csvdelimeter: "\t"
+  qweight: 1
+ -
+  qname: Q3
+  qtxt:	>-
+    SELECT $1::int,
+           $2::int,
+           $3::int
+  csvfile:    q3.csv
+  csvdelimeter: ","
+  qweight: 1
+  ```
 
 ## Drawbacks
 

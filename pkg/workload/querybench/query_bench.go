@@ -154,6 +154,7 @@ func (g *queryBench) Hooks() workload.Hooks {
 					fmt.Println("Using YAML workload file")
 
 					yget, err := GetQueriesYaml(g.workloadFile)
+					// fmt.Println(yget)
 
 					if err != nil {
 						return err
@@ -174,7 +175,10 @@ func (g *queryBench) Hooks() workload.Hooks {
 						qtmp.csvfile = s.Csvfile
 						qtmp.qweight = s.Qweight
 
-						// fmt.Println(qtmp.qweight)
+						if len(s.Csvfile) == 0 {
+							fmt.Println("NO CSVFILE")
+						}
+						// fmt.Println(qtmp.csvfile)
 
 						b, err := ioutil.ReadFile(s.Csvfile)
 						if err != nil {
@@ -403,7 +407,11 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 			for i, s := range lstr {
 				args[i] = s
 			}
-			// fmt.Println(args)
+
+			// fmt.Println("what args? :", args)
+			if len(args) == 0 {
+				stmt.preparedStmt.Query()
+			}
 			return stmt.preparedStmt.Query(args...)
 
 		}); err != nil {

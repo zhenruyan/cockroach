@@ -379,6 +379,11 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 
 	// o.stmtIdx++
 
+	// fmt.Println(stmtvals)
+	if len(stmtvals) == 0 {
+		fmt.Println("no stmtvals")
+	}
+
 	exhaustRows := func(execFn func() (*gosql.Rows, error)) error {
 		rows, err := execFn()
 		if err != nil {
@@ -408,9 +413,9 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 				args[i] = s
 			}
 
-			// fmt.Println("what args? :", args)
-			if len(args) == 0 {
-				stmt.preparedStmt.Query()
+			// fmt.Println(stmtvals)
+			if len(stmtvals) == 0 {
+				return stmt.preparedStmt.Query()
 			}
 			return stmt.preparedStmt.Query(args...)
 
@@ -418,6 +423,7 @@ func (o *queryBenchWorker) run(ctx context.Context) error {
 			return err
 		}
 	} else {
+		// fmt.Println(stmt.query)
 		if err := exhaustRows(func() (*gosql.Rows, error) {
 			return o.db.Query(stmt.query)
 		}); err != nil {

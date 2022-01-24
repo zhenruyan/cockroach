@@ -27,7 +27,7 @@ The yaml file format should begin with `workload:` at the highest level to descr
 
 - `qname` :: Name of the query instead of the full text
 - `qtxt` :: The text of the query to be run.  Values to be replaced are defined by $1, $2, ... and match the CSV file values
-- `csvfile` :: Name of the CSV file containing replacement values for the query
+- `csvfile` :: Name of the CSV file containing replacement values for the query.  Fields in the CSV file map to $1, $2, ...
 - `csvdelimeter` :: The `","` is default delimeter, but can be specified as anything such as: `"\t"` or `"|"`
 - `qweight` :: This is the weighted of this query vs the others defined within the workload
 

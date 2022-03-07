@@ -51,11 +51,6 @@ export class Sidebar extends React.Component<SidebarProps> {
       // Do not show Network Latency for single node cluster.
       isHidden: () => this.props.isSingleNodeCluster,
     },
-    {
-      path: "/hotranges",
-      text: "Hot ranges",
-      activeFor: ["/hotranges"],
-    },
     { path: "/jobs", text: "Jobs", activeFor: [] },
     {
       path: "/debug",

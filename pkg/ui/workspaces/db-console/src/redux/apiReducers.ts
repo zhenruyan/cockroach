@@ -17,8 +17,6 @@ import {
   CachedDataReducerState,
   KeyedCachedDataReducer,
   KeyedCachedDataReducerState,
-  PaginatedCachedDataReducer,
-  PaginatedCachedDataReducerState,
 } from "./cachedDataReducer";
 import * as api from "src/util/api";
 import { VersionList } from "src/interfaces/cockroachlabs";
@@ -101,19 +99,7 @@ const databaseDetailsReducerObj = new KeyedCachedDataReducer(
   "databaseDetails",
   databaseRequestToID,
 );
-
-const hotRangesRequestToID = (req: api.HotRangesRequestMessage) =>
-  req.page_token;
-
-export const hotRangesReducerObj = new PaginatedCachedDataReducer(
-  api.getHotRanges,
-  "hotRanges",
-  hotRangesRequestToID,
-);
-
 export const refreshDatabaseDetails = databaseDetailsReducerObj.refresh;
-
-export const refreshHotRanges = hotRangesReducerObj.refresh;
 
 // NOTE: We encode the db and table name so we can combine them as a string.
 // TODO(maxlang): there's probably a nicer way to do this
@@ -385,7 +371,6 @@ export interface APIReducersState {
     api.StatementDiagnosticsReportsResponseMessage
   >;
   userSQLRoles: CachedDataReducerState<api.UserSQLRolesResponseMessage>;
-  hotRanges: PaginatedCachedDataReducerState<api.HotRangesV2ResponseMessage>;
 }
 
 export const apiReducersReducer = combineReducers<APIReducersState>({
@@ -423,7 +408,6 @@ export const apiReducersReducer = combineReducers<APIReducersState>({
   [statementDiagnosticsReportsReducerObj.actionNamespace]:
     statementDiagnosticsReportsReducerObj.reducer,
   [userSQLRolesReducerObj.actionNamespace]: userSQLRolesReducerObj.reducer,
-  [hotRangesReducerObj.actionNamespace]: hotRangesReducerObj.reducer,
 });
 
 export { CachedDataReducerState, KeyedCachedDataReducerState };

@@ -1076,10 +1076,10 @@ var specs = []stmtSpec{
 			"a_expr": "timestamp",
 			"'WITH' 'OPTIONS' '(' kv_option_list ')'": "",
 			"targets":                                "( 'TABLE' table_pattern ( ( ',' table_pattern ) )* | 'DATABASE' database_name ( ( ',' database_name ) )* )",
-			"string_or_placeholder":                  "subdirectory",
-			"list_of_string_or_placeholder_opt_list": "( destination | '(' partitioned_backup_location ( ',' partitioned_backup_location )* ')' )",
+			"string_or_placeholder":                  "( ( subdirectory | 'LATEST' ) )",
+			"list_of_string_or_placeholder_opt_list": "( collectionURI | '(' localityURI ( ',' localityURI )* ')' )",
 		},
-		unlink: []string{"subdirectory", "timestamp", "destination", "partitioned_backup_location"},
+		unlink: []string{"subdirectory", "timestamp", "collectionURI", "localityURI"},
 		exclude: []*regexp.Regexp{
 			regexp.MustCompile("'REPLICATION' 'STREAM' 'FROM'"),
 		},

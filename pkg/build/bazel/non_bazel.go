@@ -13,8 +13,8 @@
 
 package bazel
 
-// This file contains stub implementations for non-bazel builds.
-// See bazel.go for full documentation on the contracts of these functions.
+// This file contains the implementations of this package for regular
+// (non-Bazel) builds, which is the only supported mode.
 
 // BuiltWithBazel returns true iff this library was built with Bazel.
 func BuiltWithBazel() bool {

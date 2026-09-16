@@ -413,14 +413,10 @@
 /pkg/cmd/docs-issue-generation/ @cockroachdb/dev-inf
 /pkg/cmd/fuzz/               @cockroachdb/test-eng
 /pkg/cmd/generate-binary/    @cockroachdb/sql-foundations
-/pkg/cmd/generate-distdir/ @cockroachdb/dev-inf
 /pkg/cmd/generate-logictest/       @cockroachdb/dev-inf
 /pkg/cmd/generate-acceptance-tests/       @cockroachdb/dev-inf
 /pkg/cmd/generate-metadata-tables/ @cockroachdb/sql-foundations
 /pkg/cmd/generate-spatial-ref-sys/ @cockroachdb/spatial
-/pkg/cmd/generate-bazel-extra/ @cockroachdb/dev-inf
-/pkg/cmd/generate-staticcheck/ @cockroachdb/dev-inf
-/pkg/cmd/generate-cgo/       @cockroachdb/dev-inf
 /pkg/cmd/geoviz/             @cockroachdb/spatial
 /pkg/cmd/github-post/        @cockroachdb/test-eng
 /pkg/cmd/github-pull-request-make/ @cockroachdb/dev-inf
@@ -488,7 +484,6 @@
 /pkg/multitenant/            @cockroachdb/multi-tenant
 /pkg/release/                @cockroachdb/dev-inf
 /pkg/roachpb/.gitattributes  @cockroachdb/dev-inf
-#!/pkg/roachpb/BUILD.bazel     @cockroachdb/kv-prs-noreview
 /pkg/roachpb/data*           @cockroachdb/kv-prs
 /pkg/roachpb/leaseinfo*      @cockroachdb/kv-prs
 /pkg/roachpb/index*          @cockroachdb/cluster-observability
@@ -530,11 +525,6 @@
 /pkg/obs/                    @cockroachdb/obs-inf-prs
 /pkg/obsservice/             @cockroachdb/obs-inf-prs
 /pkg/ccl/auditloggingccl     @cockroachdb/cluster-observability
-
-# Own all bazel files to dev-inf, but don't request reviews for them
-# as they are mostly - but not only - generated code that changes with
-# changes to the Go code in the package.
-#!**/BUILD.bazel               @cockroachdb/dev-inf-noreview
 
 # Own the generated proto files to someone. They're not
 # checked in, but since our owners tooling isn't aware

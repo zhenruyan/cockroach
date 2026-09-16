@@ -31,15 +31,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: "${{ matrix.branch }}"
-      - name: Mount bazel cache
+      - name: Mount Go caches
         uses: actions/cache@v3
         with:
-          path: "~/.cache/bazel"
-          key: bazel
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Check for updates
         run: |
-          bazel build //pkg/cmd/release
-          $(bazel info bazel-bin)/pkg/cmd/release/release_/release update-releases-file
+          go build -o bin/release ./pkg/cmd/release
+          ./bin/release update-releases-file
           git diff
       - name: Update pkg/testutils/release/cockroach_releases.yaml on ${{ matrix.branch }}
         uses: peter-evans/create-pull-request@v5

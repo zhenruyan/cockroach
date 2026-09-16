@@ -23,14 +23,15 @@ jobs:
           # (we cannot get to the "base" commit).
           fetch-depth: ${{ env.FETCH_DEPTH }}
 
-      - name: Set up Bazel cache
+      - name: Mount Go caches
         uses: actions/cache@v3
         with:
           path: |
-            ~/.cache/bazel
-          key: ${{ runner.os }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-bazel-    
+            ${{ runner.os }}-go-
 
       - name: Get list of changed packages
         shell: bash

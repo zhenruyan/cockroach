@@ -49,6 +49,7 @@ RUN apt-get update \
  && update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 100 \
     --slave /usr/bin/clang++ clang++ /usr/bin/clang++-10
 
+
 RUN curl -fsSL https://storage.googleapis.com/public-bazel-artifacts/toolchains/crosstool-ng/20210601-231954/aarch64-unknown-linux-gnu.tar.gz -o aarch64-unknown-linux-gnu.tar.gz \
  && echo 'ed7ebe618794c0a64aec742d1bf9274302f86a8a81505758c97dc99dab5fd6ab aarch64-unknown-linux-gnu.tar.gz' | sha256sum -c - \
  && curl -fsSL https://storage.googleapis.com/public-bazel-artifacts/toolchains/crosstool-ng/20210601-231954/s390x-ibm-linux-gnu.tar.gz -o s390x-ibm-linux-gnu.tar.gz \
@@ -151,7 +152,6 @@ RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key ad
  && echo 'deb https://packages.cloud.google.com/apt cloud-sdk main' | tee /etc/apt/sources.list.d/gcloud.list \
  && curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
  && echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" | tee /etc/apt/sources.list.d/google.list \
- && curl https://bazel.build/bazel-release.pub.gpg | apt-key add - \
  && curl -fsLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | apt-key add - \
  && echo "deb https://packages.microsoft.com/repos/azure-cli/ focal main" > /etc/apt/sources.list.d/azure-cli.list \
  && apt-get update \
@@ -173,7 +173,6 @@ RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key ad
 
 # awscli - roachtests
 # NB: we don't use apt-get because we need an up to date version of awscli
-# If you update the below, you should probably also update build/bazelbuilder/Dockerfile.
 RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.13.9.zip" -o "awscliv2.zip" && \
  echo "e679933eec90b0e5a75d485be6c2fae0f89a3f9ccdcb1748be69f8f456e9a85f  awscliv2.zip" | sha256sum -c - && \
  unzip awscliv2.zip && \
@@ -211,8 +210,8 @@ RUN ln -sf /usr/bin/llvm-nm /usr/bin/nm
 
 RUN rm -rf /tmp/* /var/lib/apt/lists/*
 
-RUN ln -s /go/src/github.com/cockroachdb/cockroach/build/builder/mkrelease.sh /usr/local/bin/mkrelease \
-  && ln -s /usr/bin/bazel-3.6.0 /usr/bin/bazel
+RUN ln -s /go/src/github.com/cockroachdb/cockroach/build/builder/mkrelease.sh /usr/local/bin/mkrelease
+
 
 RUN curl -fsSL https://github.com/benesch/autouseradd/releases/download/1.2.0/autouseradd-1.2.0-amd64.tar.gz -o autouseradd.tar.gz \
   && echo 'f7b0cf67564044c31ffc5e84c961726098b88b0296a57c84421659d56434a365 autouseradd.tar.gz' | sha256sum -c - \

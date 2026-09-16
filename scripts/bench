@@ -52,7 +52,7 @@ for (( i=0; i<${#shas[@]}; i+=1 )); do
   sha=${shas[i]}
   echo "Switching to $name"
   git checkout -q "$sha"
-  (set -x; ./dev bench ${PKG} --timeout=${BENCHTIMEOUT:-5m} --filter=${BENCHES} --count=${N:-10} $benchtime --bench-mem -v --stream-output --ignore-cache | tee "${dest}/bench.${name}" 2> "${dest}/log.txt")
+  (set -x; go test -tags "crdb_test" ${PKG:-./pkg/...} -run '^$' -bench="${BENCHES}" -benchmem -count=${N:-10} -timeout=${BENCHTIMEOUT:-5m} -v $benchtime | tee "${dest}/bench.${name}" 2> "${dest}/log.txt")
 done
 
 benchstat "${dest}/bench.$OLDNAME" "${dest}/bench.$NEWNAME"

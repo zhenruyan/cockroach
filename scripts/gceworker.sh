@@ -199,8 +199,6 @@ case "${cmd}" in
       -sshargs "-F ${tmpfile}" -auto -prefer "$host" -repeat watch \
       -ignore 'Path .localcluster.certs*' \
       -ignore 'Path .git' \
-      -ignore 'Path _bazel*' \
-      -ignore 'Path bazel-out*' \
       -ignore 'Path bin*' \
       -ignore 'Path build/builder_home' \
       -ignore 'Path pkg/sql/parser/gen' \

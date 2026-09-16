@@ -6,7 +6,7 @@
 # for the current platform.
 
 TC_BASE="https://teamcity.cockroachdb.com/repository/download"
-TC_ARTIFACT_PATH="latest.lastSuccessful/bazel-bin/pkg/cmd/roachprod/roachprod_/roachprod"
+TC_ARTIFACT_PATH="latest.lastSuccessful/bin/roachprod"
 
 OS=$(uname | tr '[:upper:]' '[:lower:]')
 ARCH=$(arch | tr '[:upper:]' '[:lower:]')

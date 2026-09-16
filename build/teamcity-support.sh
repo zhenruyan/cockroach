@@ -253,7 +253,7 @@ tc_build_branch() {
     echo "${TC_BUILD_BRANCH#refs/heads/}"
 }
 
-# NB: Update _tc_release_branch in teamcity-bazel-support.sh if you update this
+# NB: Keep this in sync with _tc_release_branch in teamcity-common-support.sh.
 # function.
 tc_release_branch() {
   branch=$(tc_build_branch)

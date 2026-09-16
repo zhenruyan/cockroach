@@ -88,20 +88,6 @@ EOF
     done
 fi
 
-case $ARCH in
-    x86_64) WHICH=amd64; SHASUM=4cb534c52cdd47a6223d4596d530e7c9c785438ab3b0a49ff347e991c210b2cd ;;
-    aarch64) WHICH=arm64; SHASUM=c1de6860dd4f8d5e2ec270097bd46d6a211b971a0b8b38559784bd051ea950a1 ;;
-esac
-
-# Install Bazelisk.
-# Keep this in sync with `build/bazelbuilder/Dockerfile` and `build/bootstrap/bootstrap-debian.sh`.
-curl -fsSL https://github.com/bazelbuild/bazelisk/releases/download/v1.10.1/bazelisk-linux-$WHICH > /tmp/bazelisk
-sha256sum -c - <<EOF
-$SHASUM /tmp/bazelisk
-EOF
-chmod +x /tmp/bazelisk
-mv /tmp/bazelisk /usr/bin/bazel
-
 # Add a user for the TeamCity agent if it doesn't exist already.
 id -u agent &>/dev/null 2>&1 || adduser agent --disabled-password
 

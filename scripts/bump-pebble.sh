@@ -74,15 +74,13 @@ COCKROACH_BRANCH="$USER/pebble-${BRANCH}-${NEW_SHA:0:12}"
 
 # Pull in the Pebble module at the desired SHA.
 pushd "$COCKROACH_DIR"
-./dev generate go
 go get "github.com/cockroachdb/pebble@${NEW_SHA}"
 go mod tidy
 popd
 
 # Create the branch and commit on the CockroachDB repository.
 pushd "$COCKROACH_DIR"
-./dev generate bazel --mirror
-git add go.mod go.sum DEPS.bzl build/bazelutil/distdir_files.bzl
+git add go.mod go.sum
 git branch -D "$COCKROACH_BRANCH" || true
 git checkout -b "$COCKROACH_BRANCH"
 git commit -m "go.mod: bump Pebble to ${NEW_SHA:0:12}

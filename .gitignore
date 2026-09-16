@@ -41,11 +41,8 @@ customenv.mk
 zcgo_flags*.go
 build/Railroad.jar
 
-# Bazel generated symlinks
-/_bazel
-
-# Per-user .bazelrc
-/.bazelrc.user
+# C/C++ dependency build artifacts (native Makefile build).
+/.build
 
 # Local disk buffers for "roachprod logs" command
 /*.logs
@@ -63,3 +60,6 @@ pkg/ccl/backupccl/restore_mid_schema_change_generated_test.go
 
 # Temporary directories during gomock generate
 **/gomock_reflect_*
+
+# Local machine overrides (paths, toolchain selection, etc).
+Makefile.local

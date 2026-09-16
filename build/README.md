@@ -61,27 +61,13 @@ which may or may not work (and are not officially supported).
 The `cockroachdb/builder` image has a number of cross-compilers
 installed for various targets. We build those cross-compilers in a
 separate step prior to the actual image build, and pull in tarballs
-to install them during the image build. This saves time and allows us to
-use the same toolchains for the Bazel build.
+to install them during the image build. This saves time and allows us
+to share the same toolchains across build environments.
 
-Toolchains may need to be rebuilt infrequently. Follow this process to
-do so (if you don't need to update the toolchains, proceed to "basic
-process" below):
-
-- Edit files in `build/toolchains/toolchainbuild` as desired.
-- Run `build/toolchains/toolchainbuild/buildtoolchains.sh` to test --
-  this will build the tarballs locally and place them in your
-  `artifacts` directory.
-- When you're happy with the result, commit your changes, submit a pull
-  request, and have it reviewed.
-- Ask someone with permissions to run the
-  `Build and Publish Cross Toolchains` and
-  `Build and Publish Darwin Toolchains` build configurations in TeamCity.
-  These will publish the new toolchains to a new subdirectory in Google cloud
-  storage, and the build log will additionally contain the sha256 of
-  every tarball created.
-- Update the URL's in `build/builder/Dockerfile` and their sha256's
-  accordingly. Then proceed to follow the "Basic process" steps below.
+The prebuilt toolchain tarballs referenced in `build/builder/Dockerfile`
+are published in Google Cloud Storage; when a toolchain needs to be
+refreshed, update the URLs and sha256 sums in the Dockerfile and then
+follow the "Basic process" steps below.
 
 ## Basic Process
 
@@ -110,19 +96,11 @@ back to this document and perform these steps:
 * [ ] Adjust version in Docker image ([source](./builder/Dockerfile)).
 * [ ] Adjust version in the TeamCity agent image ([setup script](./packer/teamcity-agent.sh))
 * [ ] Rebuild and push the Docker image (following [Basic Process](#basic-process))
-* [ ] Update `build/teamcity/internal/release/build-and-publish-patched-go/impl.sh` with the new version and adjust SHA256 sums as necessary.
-* [ ] Adjust `GO_VERSION` and `GO_FIPS_COMMIT` for the FIPS Go toolchain ([source](./teamcity/internal/release/build-and-publish-patched-go/impl-fips.sh)).
-* [ ] Run the `Internal / Cockroach / Build / Toolchains / Publish Patched Go for Mac` build configuration in TeamCity with your latest version of the script above. Note the job depends on another job `Build and Publish Patched Go`. That job prints out the SHA256 of all tarballs, which you will need to copy-paste into `WORKSPACE` (see below). `Publish Patched Go for Mac` is an extra step that publishes the *signed* `go` binaries for macOS. That job also prints out the SHA256 of the Mac tarballs in particular.
-* [ ] Adjust `--@io_bazel_rules_go//go/toolchain:sdk_version` in [.bazelrc](../.bazelrc).
-* [ ] Bump the version in `WORKSPACE` under `go_download_sdk`. You may need to bump [rules_go](https://github.com/bazelbuild/rules_go/releases). Also edit the filenames listed in `sdks` and update all the hashes to match what you built in the step above.
-* [ ] Bump the version in `WORKSPACE` under `go_download_sdk` for the FIPS version of Go (`go_sdk_fips`).
-* [ ] Run `./dev generate bazel` to refresh `distdir_files.bzl`, then `bazel fetch @distdir//:archives` to ensure you've updated all hashes to the correct value.
 * [ ] Bump the version in `builder.sh` accordingly ([source](./builder.sh#L6)).
 * [ ] Bump the version in `go-version-check.sh` ([source](./go-version-check.sh)), unless bumping to a new patch release.
 * [ ] Bump the go version in `go.mod`.
 * [ ] Bump the default installed version of Go in `bootstrap-debian.sh` ([source](./bootstrap/bootstrap-debian.sh)).
 * [ ] Replace other mentions of the older version of go (grep for `golang:<old_version>` and `go<old_version>`).
-* [ ] Update the `builder.dockerImage` parameter in the TeamCity [`Cockroach`](https://teamcity.cockroachdb.com/admin/editProject.html?projectId=Cockroach&tab=projectParams) and [`Internal`](https://teamcity.cockroachdb.com/admin/editProject.html?projectId=Internal&tab=projectParams) projects.
 * [ ] Ask the Developer Infrastructure team to deploy new TeamCity agent images according to [packer/README.md](./packer/README.md)
 
 You can test the new builder image in TeamCity by using the custom parameters
@@ -132,17 +110,6 @@ committing the change.
 ## Updating the nodejs version
 
 Please follow the instructions above on updating the golang version, omitting the go-version-check.sh step.
-
-## Updating the `bazelbuilder` image
-
-The `bazelbuilder` image is used exclusively for performing builds using Bazel. Only add dependencies to the image that are necessary for performing Bazel builds. (Since the Bazel build downloads most dependencies as needed, updates to the Bazel builder image should be very infrequent.) The `bazelbuilder` image is published both for `amd64` and `arm64` platforms. You can go through the process of publishing a new Bazel build
-
-- Edit `build/bazelbuilder/Dockerfile` as desired.
-- Build the image by triggering the `Build and Push Bazel Builder Image` build in TeamCity. The generated image will be published to https://hub.docker.com/r/cockroachdb/bazel.
-- Update `build/.bazelbuilderversion` with the new tag and commit all your changes.
-- Build the FIPS image by triggering the `Build and Push FIPS Bazel Builder Image` build in TeamCity. The generated image will be published to https://hub.docker.com/r/cockroachdb/bazel-fips.
-- Update `build/.bazelbuilderversion-fips` with the new tag and commit all your changes.
-- Ensure the "Bazel CI" job passes on your PR before merging.
 
 #  Dependencies
 
@@ -179,12 +146,7 @@ Dependencies are managed using `go mod`.
    references the dependency. This ensures `go mod tidy` will not delete your dependency.
    Note that IDEs may bicker that these import's paths don't exist. That's ok!
 5. Run `go mod tidy` to ensure stale dependencies are removed.
-6. Run `./dev generate bazel --mirror` to regenerate DEPS.bzl with the updated Go dependency information.
-   Note that you need engineer permissions to mirror dependencies; if you want to get the Bazel build
-   working locally without mirroring, `./dev generate bazel` will work, but you won't be able to check
-   your changes in. (Assuming that you do have engineer permissions, you can run
-   `gcloud auth application-default login` to authenticate if you get a credentials error.)
-7. Run `./dev build short` to ensure your code compiles.
+6. Run `make short` (or `go build ./pkg/cmd/cockroach-short`) to ensure your code compiles.
 
 ### Updating a Dependency
 
@@ -236,4 +198,4 @@ To achieve this, proceed as follows:
 
 ### Removing a dependency
 
-When a dependency has been removed, run `go mod tidy` and `dev generate bazel`.
+When a dependency has been removed, run `go mod tidy`.

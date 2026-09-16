@@ -1,4 +1,4 @@
-// Copyright 2015 The Cockroach Authors.
+// Copyright 2022 The Cockroach Authors.
 //
 // Use of this software is governed by the Business Source License
 // included in the file licenses/BSL.txt.
@@ -10,17 +10,9 @@
 
 package build
 
-// const char* compilerVersion() {
-// #if defined(__clang__)
-// 	return __VERSION__;
-// #elif defined(__GNUC__) || defined(__GNUG__)
-// 	return "gcc " __VERSION__;
-// #else
-// 	return "non-gcc, non-clang (or an unrecognized version)";
-// #endif
-// }
-import "C"
-
+// cgoVersion returns the C compiler version reported by `cockroach version`.
+// This build of CockroachDB does not use cgo at all, so a fixed marker is
+// reported.
 func cgoVersion() string {
-	return C.GoString(C.compilerVersion())
+	return "cgo-disabled"
 }

@@ -37,8 +37,6 @@ work-Fuzz*
 # Custom or private env vars (e.g. internal keys, access tokens, etc).
 customenv.mk
 
-# Generated files containing include paths.
-zcgo_flags*.go
 build/Railroad.jar
 
 # C/C++ dependency build artifacts (native Makefile build).

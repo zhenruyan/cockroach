@@ -134,10 +134,6 @@ repo="$GOPATH"/src/github.com/cockroachdb/cockroach
 git clone --shared system/git/cockroach.git "$repo"
 if [ $ARCH = x86_64 ]; then
     cd "$repo"
-    # Work around a bug in the builder's git version (at the time of writing)
-    # which would corrupt the submodule defs. Probably good to remove once the
-    # builder uses Ubuntu 18.04 or higher.
-    git submodule update --init --recursive
     for branch in $(git branch --all --list --sort=-committerdate 'origin/release-*' | head -n2) master
     do
         git checkout "$branch"

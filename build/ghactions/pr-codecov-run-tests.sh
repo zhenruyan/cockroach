@@ -19,15 +19,8 @@ if [ -z "${packages}" ]; then
   exit 0
 fi
 
-# The packages under test may transitively depend on cgo packages (jemalloc,
-# PROJ); make sure those C dependencies are built and their search paths are
-# visible to the Go toolchain.
-git submodule update --init c-deps/jemalloc c-deps/proj
-make libjemalloc libproj
-
-workdir="$(pwd)"
-export CGO_CFLAGS="-I${workdir}/.build/jemalloc/include"
-export CGO_LDFLAGS="-L${workdir}/.build/jemalloc/lib -L${workdir}/.build/proj/lib"
+# The build is pure Go (CGO_ENABLED=0); no C dependencies need to be built.
+export CGO_ENABLED=0
 
 # Convert package directories (pkg/foo/bar) to Go package patterns (./pkg/foo/bar).
 pkgs=()

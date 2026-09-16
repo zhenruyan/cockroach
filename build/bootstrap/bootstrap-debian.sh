@@ -51,7 +51,7 @@ sudo tar -C /usr/local -zxf /tmp/go.tgz && rm /tmp/go.tgz
 
 # Clone CockroachDB.
 git clone https://github.com/cockroachdb/cockroach "$(go env GOPATH)/src/github.com/cockroachdb/cockroach"
-git -C "$(go env GOPATH)/src/github.com/cockroachdb/cockroach" submodule update --init
+# (no git submodules to initialize)
 
 # Install the Unison file-syncer.
 . bootstrap/bootstrap-unison.sh

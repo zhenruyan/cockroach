@@ -1,4 +1,4 @@
-// Copyright 2019 The Cockroach Authors.
+// Copyright 2022 The Cockroach Authors.
 //
 // Use of this software is governed by the Business Source License
 // included in the file licenses/BSL.txt.
@@ -14,14 +14,11 @@
 package server
 
 import (
-	"unsafe"
+	"strconv"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
-
-// #include <sys/types.h>
-// #include <sys/sysctl.h>
-import "C"
 
 func setRlimitNoFile(limits *rlimit) error {
 	return unix.Setrlimit(unix.RLIMIT_NOFILE, (*unix.Rlimit)(limits))
@@ -38,14 +35,14 @@ func getRlimitNoFile(limits *rlimit) error {
 	// This does not appear to be documented and may be incomplete.
 	//
 	// See https://github.com/golang/go/issues/30401 for more context.
-	sysctlMaxFiles, err := getSysctlMaxFiles()
+	sysctlMaxFiles, err := getSysctlMaxFiles("kern.maxfiles")
 	if err != nil {
 		return err
 	}
 	if limits.Max > sysctlMaxFiles {
 		limits.Max = sysctlMaxFiles
 	}
-	sysctlMaxFilesPerProc, err := getSysctlMaxFilesPerProc()
+	sysctlMaxFilesPerProc, err := getSysctlMaxFiles("kern.maxfilesperproc")
 	if err != nil {
 		return err
 	}
@@ -55,22 +52,16 @@ func getRlimitNoFile(limits *rlimit) error {
 	return nil
 }
 
-func getSysctlMaxFiles() (uint64, error) {
-	return getSysctl(C.CTL_KERN, C.KERN_MAXFILES) // identifies the "kern.maxfiles" sysctl
-}
-
-func getSysctlMaxFilesPerProc() (uint64, error) {
-	return getSysctl(C.CTL_KERN, C.KERN_MAXFILESPERPROC) // identifies the "kern.maxfilesperproc" sysctl
-}
-
-func getSysctl(x, y C.int) (uint64, error) {
-	var out int32
-	outLen := C.size_t(unsafe.Sizeof(out))
-	sysctlMib := [...]C.int{x, y}
-	r, errno := C.sysctl(&sysctlMib[0], C.u_int(len(sysctlMib)), unsafe.Pointer(&out), &outLen,
-		nil /* newp */, 0 /* newlen */)
-	if r != 0 {
-		return 0, errno
+// getSysctlMaxFiles reads an integer-valued sysctl (e.g. "kern.maxfiles")
+// without requiring cgo.
+func getSysctlMaxFiles(name string) (uint64, error) {
+	s, err := unix.Sysctl(name)
+	if err != nil {
+		return 0, err
 	}
-	return uint64(out), nil
+	v, err := strconv.ParseUint(strings.TrimSpace(s), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return v, nil
 }

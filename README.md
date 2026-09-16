@@ -76,14 +76,18 @@ CockroachDB supports the PostgreSQL wire protocol, so you can use any available 
 
 ## Building from source
 
-CockroachDB builds with a standard Go toolchain (Go 1.19+) and a lightweight
-Makefile:
+CockroachDB builds with a standard Go toolchain (the Go 1.19/1.20 series for
+this branch) and a lightweight Makefile. No C compiler, Bazel, or git
+submodules are required:
 
 ```shell
-git submodule update --init   # fetch C/C++ dependencies: jemalloc, PROJ, GEOS
 make                          # builds ./cockroach
 make test PKG=./pkg/...       # run unit tests
 ```
+
+Spatial operations that relied on the (now removed) GEOS/PROJ C libraries
+return a descriptive error; geography measurements use a pure-Go spherical
+approximation. All other functionality is unaffected.
 
 Run `make help` for the full list of targets and options. See
 [our wiki](https://wiki.crdb.io/wiki/spaces/CRDB/pages/181338446/Getting+and+building+from+source)

@@ -171,12 +171,12 @@ export const closedSession: SessionInfo = {
   },
 };
 
-const sessionsList: SessionInfo[] = [
+const sessionsList = [
   idleSession,
   idleTransactionSession,
   activeSession,
   closedSession,
-];
+] as unknown as SessionInfo[];
 
 export const filters: Filters = {
   app: "",

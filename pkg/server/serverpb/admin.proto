@@ -1015,13 +1015,13 @@ message RecoveryVerifyResponse {
 service Admin {
   rpc RequestCA(CARequest) returns (CAResponse) {
     option (google.api.http) = {
-      get : "/_join/v1/ca"
+      get: "/_join/v1/ca"
     };
   }
 
   rpc RequestCertBundle(CertBundleRequest) returns (CertBundleResponse) {
     option (google.api.http) = {
-      get : "/_join/v1/requestbundle"
+      get: "/_join/v1/requestbundle"
     };
   }
 
@@ -1134,7 +1134,7 @@ service Admin {
   rpc Health(HealthRequest) returns (HealthResponse) {
     option (google.api.http) = {
       get: "/_admin/v1/health"
-      additional_bindings {get : "/health"}
+      additional_bindings {get: "/health"}
     };
   }
 
@@ -1244,7 +1244,7 @@ service Admin {
   rpc EnqueueRange(EnqueueRangeRequest) returns (EnqueueRangeResponse) {
     option (google.api.http) = {
       post: "/_admin/v1/enqueue_range"
-      body : "*"
+      body: "*"
     };
   }
 

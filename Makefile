@@ -149,7 +149,7 @@ $(PROTO_STAGE)/raft/v3:
 	@chmod -R u+w $@
 	@find $@ -name '*.pb.go' -delete
 
-GO_PROTOS := $(sort $(shell find pkg -type f -name '*.proto'))
+GO_PROTOS := $(sort $(shell find pkg -type d -name node_modules -prune -o -type f -name '*.proto' -print))
 
 GW_SERVER_PROTOS := ./pkg/server/serverpb/admin.proto ./pkg/server/serverpb/status.proto ./pkg/server/serverpb/authentication.proto
 GW_TS_PROTOS     := ./pkg/ts/tspb/timeseries.proto
@@ -475,6 +475,90 @@ pkg/security/securitytest/embedded.go: $(BIN_DIR)/go-bindata $(shell find pkg/se
 
 ALL_GENERATED := $(PROTOBUF_STAMPS) $(SQLPARSER_TARGETS) $(OPTGEN_TARGETS) $(GENERATED_TARGETS)
 
+
+# ---------------------------------------------------------------------------
+# Admin UI (Node.js / pnpm)
+# ---------------------------------------------------------------------------
+#
+# The web UI lives in pkg/ui (a pnpm workspace: cluster-ui library +
+# db-console app). The generated assets are embedded into the cockroach
+# binaries via //go:embed in pkg/ui/distccl and pkg/ui/distoss. Building the
+# UI requires Node.js (>=16) and pnpm (>=8); set SKIP_UI=1 to build binaries
+# with the stub UI instead.
+
+PNPM         ?= pnpm
+UI_DIR       := $(CURDIR)/pkg/ui
+UI_WSP       := $(UI_DIR)/workspaces
+UI_NODE_MODULES := $(UI_DIR)/node_modules
+# webpack 4 (db-console) requires the legacy OpenSSL provider on Node >= 17.
+UI_NODE_OPTIONS ?= $(shell node -e 'process.exit(+process.versions.node.split(".")[0]>=17?0:1)' 2>/dev/null && echo --openssl-legacy-provider)
+
+# Stamps for `pnpm install` and workspace builds.
+$(BUILD_DIR)/.ui-deps: $(UI_DIR)/pnpm-lock.yaml $(UI_DIR)/package.json
+	@echo "pnpm install (this may take a few minutes)"
+	cd $(UI_DIR) && $(PNPM) install --no-frozen-lockfile
+	@touch $@
+
+# JS protobuf client (generated from the gateway protos; previously done by
+# the Bazel crdb-protobuf-client rule).
+PBJS := $(UI_WSP)/db-console/node_modules/.bin/pbjs
+PBTS := $(UI_WSP)/db-console/node_modules/.bin/pbts
+
+UI_JS_OSS := $(UI_WSP)/db-console/src/js/protos.js
+UI_TS_OSS := $(UI_WSP)/db-console/src/js/protos.d.ts
+UI_JS_CCL := $(UI_WSP)/db-console/ccl/src/js/protos.js
+UI_TS_CCL := $(UI_WSP)/db-console/ccl/src/js/protos.d.ts
+
+UI_PROTO_PATHS := --path pkg --path $(GOGO_PATH) --path $(ERRORS_PATH) \
+	--path $(PROTO_STAGE) --path $(PROMETHEUS_PATH) --path $(GWAPI_PATH)
+UI_PROTO_DEPS := $(GO_PROTOS) $(PROTO_STAGE)/raft/v3 $(UI_DIR)/.gitignore | $(BUILD_DIR)/.ui-deps
+
+$(UI_JS_OSS): $(GW_PROTOS) $(UI_PROTO_DEPS)
+	@echo "pbjs (OSS protobuf client)"
+	echo '// GENERATED FILE DO NOT EDIT' > $@
+	$(PBJS) -t static-module -w es6 --strict-long --keep-case $(UI_PROTO_PATHS) $(patsubst ./%,%,$(GW_PROTOS)) >> $@
+
+$(UI_JS_CCL): $(GW_PROTOS) pkg/ccl/storageccl/engineccl/enginepbccl/stats.proto $(UI_PROTO_DEPS)
+	@echo "pbjs (CCL protobuf client)"
+	echo '// GENERATED FILE DO NOT EDIT' > $@
+	$(PBJS) -t static-module -w es6 --strict-long --keep-case $(UI_PROTO_PATHS) $(patsubst ./%,%,$(GW_PROTOS)) pkg/ccl/storageccl/engineccl/enginepbccl/stats.proto >> $@
+
+$(UI_TS_OSS): $(UI_JS_OSS)
+	echo '// GENERATED FILE DO NOT EDIT' > $@
+	$(PBTS) $(UI_JS_OSS) >> $@
+
+$(UI_TS_CCL): $(UI_JS_CCL)
+	echo '// GENERATED FILE DO NOT EDIT' > $@
+	$(PBTS) $(UI_JS_CCL) >> $@
+
+# cluster-ui library (tsc + webpack; also needs the eslint plugin bundle).
+ESLINT_PLUGIN_CRDB := $(UI_WSP)/eslint-plugin-crdb/dist/index.js
+$(ESLINT_PLUGIN_CRDB): $(BUILD_DIR)/.ui-deps
+	cd $(UI_WSP)/eslint-plugin-crdb && $(PNPM) build
+
+CLUSTER_UI_JS := $(UI_WSP)/cluster-ui/dist/js/main.js
+$(CLUSTER_UI_JS): $(UI_TS_OSS) $(ESLINT_PLUGIN_CRDB) $(BUILD_DIR)/.ui-deps
+	@echo "building cluster-ui"
+	cd $(UI_WSP)/cluster-ui && NODE_OPTIONS="$(UI_NODE_OPTIONS)" $(PNPM) build
+
+# db-console application bundles -> embedded asset dirs.
+UI_ASSETS_CCL := $(UI_DIR)/distccl/assets/bundle.js
+UI_ASSETS_OSS := $(UI_DIR)/distoss/assets/bundle.js
+
+$(UI_ASSETS_CCL): $(CLUSTER_UI_JS) $(UI_TS_CCL) $(BUILD_DIR)/.ui-deps
+	@echo "webpack db-console (CCL)"
+	find $(UI_DIR)/distccl/assets -mindepth 1 -not -name .gitkeep -delete
+	cd $(UI_WSP)/db-console && NODE_OPTIONS="$(UI_NODE_OPTIONS) --max-old-space-size=5000" $(PNPM) exec webpack --config webpack.config.js --env.dist=ccl
+
+$(UI_ASSETS_OSS): $(CLUSTER_UI_JS) $(UI_TS_OSS) $(BUILD_DIR)/.ui-deps
+	@echo "webpack db-console (OSS)"
+	find $(UI_DIR)/distoss/assets -mindepth 1 -not -name .gitkeep -delete
+	cd $(UI_WSP)/db-console && NODE_OPTIONS="$(UI_NODE_OPTIONS) --max-old-space-size=5000" $(PNPM) exec webpack --config webpack.config.js --env.dist=oss
+
+.PHONY: ui
+ui: ## Build the Admin UI assets (embedded by make build).
+ui: $(UI_ASSETS_CCL) $(UI_ASSETS_OSS)
+
 # ---------------------------------------------------------------------------
 # Go binaries
 # ---------------------------------------------------------------------------
@@ -485,26 +569,35 @@ ALL_GENERATED := $(PROTOBUF_STAMPS) $(SQLPARSER_TARGETS) $(OPTGEN_TARGETS) $(GEN
 
 GEN_DEPS := $(SQLPARSER_TARGETS) $(OPTGEN_TARGETS) $(GENERATED_TARGETS) $(PROTOBUF_STAMPS)
 
+# Binaries embed the Admin UI by default; SKIP_UI=1 keeps the stub UI.
+ifeq ($(SKIP_UI),)
+UI_DEPS_CCL := $(UI_ASSETS_CCL)
+UI_DEPS_OSS := $(UI_ASSETS_OSS)
+else
+UI_DEPS_CCL :=
+UI_DEPS_OSS :=
+endif
+
 .DEFAULT_GOAL := build
 
 .PHONY: build
 build: | check-go
 build: ## Build the `cockroach` binary (full edition, with CCL code).
-build: $(GEN_DEPS)
+build: $(GEN_DEPS) $(UI_DEPS_CCL)
 	@echo "go build -o $(COCKROACH) ./pkg/cmd/cockroach"
 	@$(GO_BUILD) -o $(COCKROACH) ./pkg/cmd/cockroach
 
 .PHONY: oss
 oss: | check-go
 oss: ## Build the pure-OSS `cockroachoss` binary.
-oss: $(GEN_DEPS)
+oss: $(GEN_DEPS) $(UI_DEPS_OSS)
 	@echo "go build -o $(COCKROACHOSS) ./pkg/cmd/cockroach-oss"
 	@$(GO_BUILD) -o $(COCKROACHOSS) ./pkg/cmd/cockroach-oss
 
 .PHONY: short
 short: | check-go
 short: ## Build `cockroachshort` (stripped-down development binary).
-short: $(GEN_DEPS)
+short: $(GEN_DEPS) $(UI_DEPS_CCL)
 	@echo "go build -o $(COCKROACHSHORT) ./pkg/cmd/cockroach-short"
 	@$(GO) build $(GOFLAGS) -tags '$(BUILD_TAGS) short' -ldflags '$(LDFLAGS)' -o $(COCKROACHSHORT) ./pkg/cmd/cockroach-short
 
@@ -613,11 +706,13 @@ help: ## Print this message.
 		"PKG" "package selector for tests/vet (default: ./pkg/...)" \
 		"TESTS" "regex of tests to run with make test (default: .)" \
 		"CGO_ENABLED=0" "enforced: the build never invokes a C toolchain" \
+		"SKIP_UI=1" "skip the Node.js Admin UI build" \
 		"GO=go" "select the Go toolchain"
 	@echo ""
 	@echo "Typical usage:"
 	@printf "  %s\n" \
-		"make build                                # ./cockroach" \
+		"make build                                # ./cockroach (with UI)" \
+		"make SKIP_UI=1 build                        # without the Admin UI (no node)" \
 \
 		"make test PKG=./pkg/sql                   # unit tests for one package" \
 		"make test PKG=./pkg/sql TESTS=TestParse   # a single test" \

@@ -122,7 +122,7 @@ export const transaction = {
   },
 };
 
-export const transactionDetailsData: StatementsResponse = {
+export const transactionDetailsData = {
   stmts_total_runtime_secs: 1,
   txns_total_runtime_secs: 1,
   oldest_aggregated_ts_returned: timestamp,
@@ -536,13 +536,13 @@ export const transactionDetailsData: StatementsResponse = {
       },
     },
   ],
-};
+} as unknown as StatementsResponse;
 
-export const timeScale: TimeScale = {
+export const timeScale = {
   windowSize: moment.duration(1, "year"),
   sampleSize: moment.duration(1, "day"),
   fixedWindowEnd: moment.utc("2021.12.31"),
   key: "Custom",
-};
+} as unknown as TimeScale;
 
 export const requestTime = moment.utc("2023.01.5");

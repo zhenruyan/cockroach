@@ -81,9 +81,13 @@ this branch) and a lightweight Makefile. No C compiler, Bazel, or git
 submodules are required:
 
 ```shell
-make                          # builds ./cockroach
+make                          # builds ./cockroach (incl. the Admin UI)
 make test PKG=./pkg/...       # run unit tests
 ```
+
+Building the Admin UI requires Node.js (>=16, webpack uses the legacy OpenSSL
+provider on >=17) and pnpm (>=8); binaries link the UI assets via `go:embed`.
+Use `make SKIP_UI=1 build` to skip the Node toolchain and get the stub UI.
 
 Spatial operations that relied on the (now removed) GEOS/PROJ C libraries
 return a descriptive error; geography measurements use a pure-Go spherical

@@ -30,6 +30,10 @@
     "node_modules",
     "dist",
     "**/*.test.*",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.fixture.ts",
+    "**/*.stories.tsx",
     ".jest"
   ]
 }

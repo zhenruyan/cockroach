@@ -19,7 +19,7 @@ const history = createMemoryHistory({ initialEntries: ["/statements"] });
 
 const lastUpdated = moment("Nov 28 2022 01:30:00 GMT");
 
-const statementDetailsNoData: StatementDetailsResponse = {
+const statementDetailsNoData = {
   statement: {
     metadata: {
       query: "",
@@ -71,9 +71,9 @@ const statementDetailsNoData: StatementDetailsResponse = {
   internal_app_name_prefix: "$ internal",
   statement_statistics_per_aggregated_ts: [],
   statement_statistics_per_plan_hash: [],
-};
+} as unknown as StatementDetailsResponse;
 
-const statementDetailsData: StatementDetailsResponse = {
+const statementDetailsData = {
   statement: {
     metadata: {
       query: "SELECT * FROM crdb_internal.node_build_info",
@@ -813,7 +813,7 @@ const statementDetailsData: StatementDetailsResponse = {
     },
   ],
   internal_app_name_prefix: "$ internal",
-};
+} as unknown as StatementDetailsResponse;
 
 export const getStatementDetailsPropsFixture = (
   withData = true,
